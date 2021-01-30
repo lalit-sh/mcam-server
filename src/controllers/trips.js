@@ -41,7 +41,7 @@ class TripsController extends BaseController{
             if(tripName && typeof tripName == "string")
                 condition.name = tripName;
 
-            const trip = await Trips.find({ "username": username }).limit(limit).skip(skip).sort({created_at: -1});
+            const trip = await Trips.find({ "username": username }).limit(limit).skip(skip).sort({created_at: 1});
             return this.response(res, trip);
         }catch(error){
             return this.response(res, {"message": "Unable to fetch results", error: error})

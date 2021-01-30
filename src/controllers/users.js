@@ -81,17 +81,36 @@ class AuthController extends BaseController {
         return res.status(201).json({"message": "Method not setup"});
     }
 
-    getUserContacts = async (req, res) => {
-        let username = app.get("user");
-        if(username)
-            username = username["username"];
-        else
-            return this.response(res, {"message": "Invalid user provided"});
-        
+    async getUserContacts(req, res) {
         try{
+            let query = req.query;
+            let username = app.get("user");
+            if(username)
+                username = username["username"];
+            else
+                return this.response(res, {"message": "Invalid user provided"});
+            
             const result = await User.find({}, {username: 1, deviceId: 1});
             return this.response(res, result);
         }catch(err){
+            return this.response(res, {"message": err.message});
+        }
+    }
+
+    syncUserContacts = async (req, res) => {
+        try{
+            if(!req.user) return this.response(res, {"message": "Invalid user"});
+            let contacts = req.body && req.body.contacts;
+            if(!contacts || !Array.isArray(contacts) || contacts.length == 0){
+                return this.response(res, {"message": "No data to check"});
+            }
+            let c = contacts.map(el => {
+                return el.number || el
+            });
+            const result = await User.find({"username": {$in: c}}, {username:1});
+            return this.response(res, result);
+        }catch(err){
+            console.log(err);
             return this.response(res, {"message": err.message});
         }
     }

@@ -13,4 +13,5 @@ module.exports = app => {
     app.route(process.env.API_BASE + "users").get(getUserDetails);
     app.route(process.env.API_BASE + "users").post(updateUser);
     app.route(process.env.API_BASE + "users/contacts").get(getUserContacts);
+    app.route(process.env.API_BASE + "users/contacts").post(AuthController.syncUserContacts);
 }
