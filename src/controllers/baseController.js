@@ -20,6 +20,10 @@ class BaseController {
 
         return username;
     }
+
+    inValidUserResponse = (res) => {
+        return this.response(res, {message: "Invalid user"});
+    }
 }
 
 export default BaseController;

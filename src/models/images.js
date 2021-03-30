@@ -20,7 +20,6 @@ const schema = new Schema({
     members: [Object],
     isDeleted: {
         type: Boolean,
-        unique: [true, "Only one trip can stay active at one time"],
         default: false
     }
 }, { timestamps: { createdAt: "created_at", updatedAt: "updated_at" } });

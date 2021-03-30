@@ -18,7 +18,7 @@ class AuthController extends BaseController {
 
             let success = await user.comparePassword(req.body.password);
             if (success === false) return res.status(200).json({ "message": "Either username or password is incorrect." });;
-
+            user.updateOne({isLoggedIn: true});
             return res.status(200).json(genToken(user));
         } catch (err) {
             console.log(err);
@@ -43,6 +43,7 @@ class AuthController extends BaseController {
                     return res.status(200).json({ "message": "Something went wrong.", error: err });
                 }
                 // let user = await User.findOne({ "username": req.body.username }).exec();
+                user.updateOne({isLoggedIn: true});
                 return res.status(200).json(genToken(user));    
             });        
             
@@ -107,11 +108,37 @@ class AuthController extends BaseController {
             let c = contacts.map(el => {
                 return el.number || el
             });
-            const result = await User.find({"username": {$in: c}}, {username:1});
+            const result = await User.find({$and: [{"username": {$in: c}}, {"username": {$ne: req.user.username}}]}, {username:1});
             return this.response(res, result);
         }catch(err){
             console.log(err);
             return this.response(res, {"message": err.message});
+        }
+    }
+
+    updateFCMToken = async (req, res) => {
+        try{
+            if(!req.user) return this.response(res, {"message": "Invalid user"});
+            let fcmToken = req.body && req.body.token;
+            if((!fcmToken || !fcmToken.trim())) return this.response(res, {"message": "Invalid call."});
+            let username = req.user.username;
+            const result = await User.updateOne({username: username}, {fcmToken: fcmToken});
+            return this.response(res, result);
+        }catch(err){
+            console.log(err);
+            return this.response(res, {message: err.messate})
+        }
+    }
+
+    logout = async (req, res) => {
+        try{
+            if(!req.user) return this.inValidUserResponse(res);
+            let username = req.user.username;
+            const result = await User.updateOne({username: username}, {fcmToken: "", isLoggedIn: true});
+            return this.response(res, result);
+        }catch(err){
+            console.log(err);
+            return this.response(res, {message: err.message});
         }
     }
 }

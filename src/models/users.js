@@ -15,6 +15,16 @@ const schema = new mongoose.Schema({
     deviceId: {
         type: String,
         required: true
+    },
+    fcmToken: {
+        type: String,
+        required: false,
+        unique: true
+    },
+    isLoggedIn: {
+        type: Boolean,
+        required: true,
+        default: false
     }
 }, { timestamps: { createdAt: "created_at", updatedAt: "updated_at" } });
 

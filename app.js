@@ -38,11 +38,11 @@ app.all(process.env.API_BASE + "*", (req, res, next) => {
 
 require("./src/routes")(app);
 
-var server = app.listen(port, () => {
+app.listen(port, () => {
     console.log('The magic happens on port ' + port);
 });
 
-const io = require("socket.io")(server);
-io.sockets.on('connection', function(socket) {
-    require("./src/routes/socket.js")(socket);
-});
+// const io = require("socket.io")(server);
+// io.sockets.on('connection', function(socket) {
+//     require("./src/routes/socket.js")(socket);
+// });
