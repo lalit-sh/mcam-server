@@ -7,6 +7,7 @@ var expressValidator = require("express-validator");
 var db = require( "./src/db");
 const auth = require("./src/middleware/auth").default;
 const port = process.env.PORT || 9004;
+const path = require("path");
 
 const app = express();
 module.exports = app;
@@ -35,6 +36,8 @@ app.all(process.env.API_BASE + "*", (req, res, next) => {
         return next();
     })(req, res, next);
 });
+
+app.use(express.static(path.join(__dirname, 'public')));
 
 require("./src/routes")(app);
 
