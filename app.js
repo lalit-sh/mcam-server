@@ -8,11 +8,22 @@ var db = require( "./src/db");
 const auth = require("./src/middleware/auth").default;
 const port = process.env.PORT || 9004;
 const path = require("path");
+var forceSsl = require('express-force-ssl');
+const fs = require('fs');
+var minify = require('express-minify');
+var compression = require('compression');
+const https = require('https');
+var http = require('http');
+
+
+const env = process.env.NODE_ENV;
+
 
 const app = express();
 module.exports = app;
 
-app.use(morgan(process.env.NODE_ENV));
+
+app.use(morgan(env));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended: true}));
 app.use(expressValidator());
@@ -41,9 +52,33 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 require("./src/routes")(app);
 
-app.listen(port, () => {
-    console.log('The magic happens on port ' + port);
-});
+if(env && (env == "production" || env == "PRODUCTION")){
+
+    app.set('forceSSLOptions', {
+        enable301Redirects: true,
+        trustXFPHeader: false,
+        httpsPort: 443,
+        sslRequiredMessage: 'SSL Required.'
+    });
+    app.use(forceSsl);
+    app.use(compression());
+    app.use(minify());
+
+    var https_options = {
+        key: fs.readFileSync(path.join(__dirname, 'ssl/private.key')),
+        cert: fs.readFileSync(path.join(__dirname, 'ssl/certificate.crt')),
+        ca: fs.readFileSync(path.join(__dirname, 'ssl/ca_bundle.crt')),
+        secure: true
+    };
+    https.createServer(https_options, app).listen(443, () => {
+        console.log(`working on port ${443}`);
+    });
+    http.createServer(app).listen(80);
+}else{
+    app.listen(port,function(){
+        console.log(`Working on port ${port}`);
+    });
+}
 
 // const io = require("socket.io")(server);
 // io.sockets.on('connection', function(socket) {
