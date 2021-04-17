@@ -7,8 +7,8 @@ class BaseController {
             this.model = model;
     }
 
-    response(res,json){
-        return res.status(200).json(json);
+    response(res,json, status=200){
+        return res.status(status).json(json);
     }
 
     getUserName(){

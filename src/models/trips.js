@@ -10,7 +10,7 @@ const schema = new Schema({
         type: String,
         required: [true, "Username required"]
     },
-    members: [String],
+    members: [Object],
     isActive: {
         type: Boolean,
         default: false

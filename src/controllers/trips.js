@@ -1,21 +1,32 @@
 import Trips from "../models/trips";
 import BaseController from "./baseController";
-import app from "../../app";
+import Users from "../models/users";
+import FCMMiddleware from "../middleware/FCM.middleware"
 
+const fcm = new FCMMiddleware();
 class TripsController extends BaseController{
 
     async createNewTrip(req, res){
-        let { name, members } = req.body;
-        let username = this.getUserName();
-
         try{
+            let { name, members } = req.body;
+            let username = this.getUserName();
+            let admin = {
+                username: username,
+                isAdmin: true
+            }
+            if(members && Array.isArray(members) && members.length > 0 && !members.findIndex(el => el.username !== username))
+                members = [admin, ...members]
+            else
+                members = [admin]
+
             let d = {
                 name: name,
                 username: username,
                 members: members,
                 status: 'Active',
-                isActive: true
+                isActive: true,
             };
+
             await Trips.updateMany({username: username}, {$set: {"isActive": false}});
             const trip = new Trips(d);
             const result = await trip.save();
@@ -28,21 +39,22 @@ class TripsController extends BaseController{
     }
 
     async getTrips(req, res){
-        let { tripName, readDeleted, limit, skip } = req.query;
+        let { limit, skip } = req.query;
         let username = this.getUserName();
 
         try{
-            let condition = {'username': username, status: 'Active'};
-            
-            if(readDeleted && readDeleted === true){
-                delete condition["status"];
-            }
-
-            if(tripName && typeof tripName == "string")
-                condition.name = tripName;
-
             const trip = await Trips.find({ "username": username }).limit(limit).skip(skip).sort({created_at: 1});
             return this.response(res, trip);
+        }catch(error){
+            return this.response(res, {"message": "Unable to fetch results", error: error})
+        }
+    }
+
+    async getUserTrips(req, res){
+        try{
+            let user = req.user.username;
+            const trips = await Trips.find({ "members.username": user, isActive: true })
+            return this.response(res, trips);
         }catch(error){
             return this.response(res, {"message": "Unable to fetch results", error: error})
         }
@@ -63,6 +75,15 @@ class TripsController extends BaseController{
             if(!username){
                 return this.response(res, {"message": "Missing parameter username"});
             }
+
+            members = members.map(el => {
+                if(typeof el == 'string'){
+                    el = {
+                        username: el
+                    }
+                }
+                return el;
+            })
 
             let d = {
                 members: members
@@ -117,6 +138,49 @@ class TripsController extends BaseController{
 
         }catch(err){
             return this.response(res, {"message": "Unable to update trip", error: err});
+        }
+    }
+
+    async manageMembersToGroup(req, res){
+        try{
+            let username = req.user.username;
+            let { member, groupName, operation } = req.body;
+            if(!operation)
+                operation = 'add';
+            if(!groupName || !member || !username){
+                return this.response(res, {
+                    "message": "Invalid details provided to update the group."
+                }, 400)
+            }
+
+            let d = {$addToSet: {members: {"username": member}}};
+            let q = {username: username, name: groupName, "members.username": {$nin: [member]}};
+            
+            if(operation == 'remove'){
+                q["members.username"] = {$in: [member]};
+                d = {$pull: {members: {username: member}}}
+            }
+            
+            let trip = await Trips.findOneAndUpdate(q, d, {new: true, useFindAndModify: false});
+
+            if(operation == "add"){
+                let user = await Users.findOne({username: member});
+                if(user && user.fcmToken){
+                    let message = fcm.makeMessage({
+                        data: {
+                            sender: username,
+                            type: "ADDED_USER_TO_GROUP",
+                            groupName: groupName
+                        }
+                    });
+                    fcm.sendMessage(message, [user.fcmToken]);
+                }
+            }
+
+            return this.response(res, trip);
+        }catch(err){
+            console.log("Error in trips.js controller in manageMembersToGroup",err);
+            return this.response(res, {"message": "Unable to update trip", error: err}, 400);
         }
     }
 }

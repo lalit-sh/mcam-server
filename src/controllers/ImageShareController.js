@@ -2,10 +2,11 @@ import BaseController from "./baseController";
 import Images, { newImage } from "../models/images";
 import Users from "../models/users";
 import Trips from "../models/trips";
-import { FCM_API_KEY } from "../config/config";
-import gcm from "node-gcm";
+import FCMMiddleware from "../middleware/FCM.middleware";
+// import { FCM_API_KEY } from "../config/config";
+// import gcm from "node-gcm";
 
-let fcm = new gcm.Sender(FCM_API_KEY);
+let fcm = new FCMMiddleware();
 
 class ImageShareController extends  BaseController {
 
@@ -31,40 +32,27 @@ class ImageShareController extends  BaseController {
             m = m.map(el => {
                 fcms.push(el.fcmToken);
                 return {username: el.username, isImageDelivered: false}
-            })
+            });
             let result = await newImage({
                 sender: username,
                 tripname: t.name,
                 imageKey: imageKey,
                 imageUrl: imageUrl,
-                members: m
+                members: m,
+                type: "NEW_IMAGE_RECEIVED"
             });
             
-            var message = new gcm.Message({
-                priority: 'high',
-                // notification: {
-                //     title: `New Image Shared`,
-                //     body: `${username} share image in ${t.name} group`,
-                // },
-                data: {
-                    imageUri: imageUrl,
-                    imageKey: imageKey,
-                    group: t.name,
-                    username: username,
-                    id: result._id
-                },
-            });
-
-            fcm.send(message, {registrationTokens: fcms}, function (err, response) {
-                console.log("err", err)
-                console.log("response", response)
-                if (err) {
-                    if (JSON.parse(err).results)
-                        console.log(JSON.parse(err).results[0].error)
-                } else {
-
-                }
-            })
+            var message = fcm.makeMessage({
+                                            priority: 'high',
+                                            data: {
+                                                imageUri: imageUrl,
+                                                imageKey: imageKey,
+                                                group: t.name,
+                                                sender: username,
+                                                id: result._id
+                                            }
+                                        });
+            fcm.sendMessage(message, fcms);
             return this.response(res, {"success": true})
         }catch(err){
             console.log("Error in ImageShareController processNewImageClicked action ", err);
