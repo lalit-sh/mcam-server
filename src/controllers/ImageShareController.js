@@ -52,7 +52,8 @@ class ImageShareController extends  BaseController {
                                                 imageKey: imageKey,
                                                 group: t.name,
                                                 sender: username,
-                                                id: result._id
+                                                id: result._id,
+                                                type: "NEW_IMAGE_RECEIVED"
                                             }
                                         });
             fcm.sendMessage(message, fcms);
