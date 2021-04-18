@@ -26,8 +26,11 @@ class ImageShareController extends  BaseController {
             if(t && !members || members.length < 1){
                 members = t.members;
             }
+            
+            let mm = []
+            members = members.map((el) => el.username !== username && mm.push(el.username));//skipping self
 
-            let m = await Users.find({username: {$in: members}, fcmToken: {$exists: true}});
+            let m = await Users.find({username: {$in: mm}, fcmToken: {$exists: true}});
             let fcms = [];
             m = m.map(el => {
                 fcms.push(el.fcmToken);
