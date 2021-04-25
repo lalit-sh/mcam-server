@@ -102,19 +102,14 @@ class TripsController extends BaseController{
 
     async deleteTrip(req, res){
         try{
-            let { trips } = req.body;
+            let trips  = req.body;
             let username = this.getUserName();
 
-            if(!trips || (Array.isArray(trips) && trips.length < 1) ){
-                return this.response(res, {"message": "missing parameter trip"})
+            if(trips && trips.username == username)
+            {
+                let trip = await Trips.findOneAndDelete({members: {$elemMatch: { username: trips.username, isAdmin: true }}});
             }
-
-            if(!Array.isArray(trips) && typeof trips == "string"){
-                trips = [trips];
-            }
-
-            let trip = await Trips.remove({username: username,  name: {$in: trips}});
-            return this.response(res, trip);
+            return this.response(res, {"message": "Successful"});
         }catch(err){
             return this.response(res, {"message": "Unable to delete trip", error: err});
         }
