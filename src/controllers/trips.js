@@ -178,6 +178,12 @@ class TripsController extends BaseController{
             return this.response(res, {"message": "Unable to update trip", error: err}, 400);
         }
     }
+
+    async userLeaveGroup(req, res){
+        let username = req.user.username;
+        console.log(`${username}`);
+    }
+
 }
 
 export default TripsController;
