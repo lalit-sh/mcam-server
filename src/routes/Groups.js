@@ -1,4 +1,4 @@
-import Controller from "../controllers/trips";
+import Controller from "../controllers/GroupsController";
 
 module.exports = app => {
     let TripsController = new Controller();
@@ -16,4 +16,5 @@ module.exports = app => {
     app.route(`${process.env.API_BASE}trips/mark_active`).get(markTripActive);
     app.route(`${process.env.API_BASE}getUserTrips`).get((req, res) => TripsController.getUserTrips(req, res));
     app.route(`${process.env.API_BASE}manageMembersToGroup`).post((req, res) => TripsController.manageMembersToGroup(req, res));
+    app.route(`${process.env.API_BASE}userLeaveGroup`).post((req, res) => TripsController.userLeaveGroup(req, res));
 }

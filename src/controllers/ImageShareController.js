@@ -1,23 +1,45 @@
-import BaseController from "./baseController";
+import BaseController from "./BaseController";
 import Images, { newImage } from "../models/images";
 import Users from "../models/users";
-import Trips from "../models/trips";
+import Trips from "../models/groups";
 import FCMMiddleware from "../middleware/FCM.middleware";
-// import { FCM_API_KEY } from "../config/config";
-// import gcm from "node-gcm";
+import  { PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+import { s3Client } from "../config/s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+
 
 let fcm = new FCMMiddleware();
-
 class ImageShareController extends  BaseController {
+
+    uploadImageS3 = async (req, res, next) => {
+        try{
+            let { groupId, imageKey } = req.body;
+            let t = await Trips.findOne({_id: groupId});
+            if(!t){
+                return this.response(res, {"success": false, message: "Invalid trip provdided"});
+            }
+            const fileContent  = Buffer.from(req.files.file.data, 'binary')
+            const params = {
+                Bucket: process.env.S3_BUCKET,
+                Key: `${process.env.S3_OBJECT_PATH}/${imageKey}`, // File name you want to save as in S3
+                Body: fileContent 
+            };
+            await s3Client.send(new PutObjectCommand(params))            
+            next();
+        }catch(err){
+            console.log("Error in ImageShareController uploadImageS3 action ", err);
+            return this.response(res, {"message": err});   
+        }
+    }
 
     processNewImageClicked = async (req, res) => {
         try{
             let data = req.body;
             let username = req.user.username;
-            if(!data.imageUrl || !data.groupId || !username || !data.imageKey ){
+            if(!data.groupId || !username || !data.imageKey ){
                 return this.response(res, {"message": "Invalid data provided"});
             }
-            let { imageUrl, members, groupId, imageKey } = data;
+            let { members, groupId, imageKey } = data;
             let t = await Trips.findOne({_id: groupId});
             if(!t){
                 return this.response(res, {"success": false, message: "Invalid trip provdided"});
@@ -40,15 +62,22 @@ class ImageShareController extends  BaseController {
                 sender: username,
                 tripname: t.name,
                 imageKey: imageKey,
-                imageUrl: imageUrl,
                 members: m,
                 type: "NEW_IMAGE_RECEIVED"
             });
             
+            let bucket = process.env.S3_BUCKET
+            const getObjectParams = {
+                Bucket: bucket,
+                Key: `${process.env.S3_OBJECT_PATH}/${imageKey}`
+            };
+            let command = new GetObjectCommand(getObjectParams);
+            const url = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
+            
             var message = fcm.makeMessage({
                                             priority: 'high',
                                             data: {
-                                                imageUri: imageUrl,
+                                                imageUri: url,
                                                 imageKey: imageKey,
                                                 group: t.name,
                                                 sender: username,
@@ -63,6 +92,23 @@ class ImageShareController extends  BaseController {
             return this.response(res, {"message": err});
         }        
     }
+
+    // getPresignedUrlPUT = async (req, res) => {
+    //     try{
+    //         let { key } = req.query
+    //         let bucket = process.env.S3_BUCKET
+    //         const getObjectParams = {
+    //             Bucket: bucket,
+    //             Key: `${process.env.S3_OBJECT_PATH}/${key}`
+    //         }
+    //         let command = new PutObjectCommand(getObjectParams);
+    //         const url = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
+    //         return this.response(res, url);
+    //     }catch(err){
+    //         console.log("Error in ImageShareController getPresignedUrl action ", err);
+    //         return this.response(res, {"message": err});
+    //     }
+    // } 
 
     // sendNotifiction = () => {
 

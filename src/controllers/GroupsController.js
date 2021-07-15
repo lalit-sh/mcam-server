@@ -1,9 +1,8 @@
-import Trips from "../models/trips";
-import BaseController from "./baseController";
+import Trips from "../models/groups";
+import BaseController from "./BaseController";
 import Users from "../models/users";
-import FCMMiddleware from "../middleware/FCM.middleware"
+import { groupDeletedNotification, userAddedNotification, userLeftNotifiction, userRemovedNotification } from "../helpers/NotificationHelpers"
 
-const fcm = new FCMMiddleware();
 class TripsController extends BaseController{
 
     async createNewTrip(req, res){
@@ -102,16 +101,18 @@ class TripsController extends BaseController{
 
     async deleteTrip(req, res){
         try{
-            let trips  = req.body;
+            let id  = req.body.group_id;
             let username = this.getUserName();
-
-            if(trips && trips.username == username)
-            {
-                let trip = await Trips.findOneAndDelete({members: {$elemMatch: { username: trips.username, isAdmin: true }}});
+            let result = await Trips.findOneAndDelete({_id: id,members: {$elemMatch: { username: username, isAdmin: true }}});
+            if(result){
+                await groupDeletedNotification({members: result.members, sender: username, groupName: result.name, groupId: result._id})
+                return this.response(res, result);
             }
-            return this.response(res, {"message": "Successful"});
+
+            return this.response(res, {"message": "Unable to delete group"}, 400);
         }catch(err){
-            return this.response(res, {"message": "Unable to delete trip", error: err});
+            console.log("Error in GroupsController.js at deleteTrip: ", err)
+            return this.response(res, {"message": "Unable to delete trip", error: err}, 400);
         }
     }
 
@@ -139,17 +140,17 @@ class TripsController extends BaseController{
     async manageMembersToGroup(req, res){
         try{
             let username = req.user.username;
-            let { member, groupName, operation } = req.body;
+            let { member, groupName, operation, groupId } = req.body;
             if(!operation)
                 operation = 'add';
-            if(!groupName || !member || !username){
+            if(!groupId || !member || !username){
                 return this.response(res, {
                     "message": "Invalid details provided to update the group."
                 }, 400)
             }
 
             let d = {$addToSet: {members: {"username": member}}};
-            let q = {username: username, name: groupName, "members.username": {$nin: [member]}};
+            let q = {_id: groupId, "members.username": {$nin: [member]}};
             
             if(operation == 'remove'){
                 q["members.username"] = {$in: [member]};
@@ -157,25 +158,37 @@ class TripsController extends BaseController{
             }
             
             let trip = await Trips.findOneAndUpdate(q, d, {new: true, useFindAndModify: false});
-
-            if(operation == "add"){
-                let user = await Users.findOne({username: member});
-                if(user && user.fcmToken){
-                    let message = fcm.makeMessage({
-                        data: {
-                            sender: username,
-                            type: "ADDED_USER_TO_GROUP",
-                            groupName: groupName
-                        }
-                    });
-                    fcm.sendMessage(message, [user.fcmToken]);
+            console.log("trip", trip);
+            if(trip){
+                if(operation == "add"){
+                    await userAddedNotification({members: trip.members, updatedMember: member, sender: username, groupName: groupName, groupId: trip._id});
+                }else{
+                    await userRemovedNotification({members: [...trip.members, {username: member}], sender: username, updatedMember: member, groupName: groupName, groupId: trip._id});
                 }
-            }
 
-            return this.response(res, trip);
+                return this.response(res, trip);
+            }
+            return this.response(res, {"message": "Unable to update trip"}, 400);
         }catch(err){
             console.log("Error in trips.js controller in manageMembersToGroup",err);
             return this.response(res, {"message": "Unable to update trip", error: err}, 400);
+        }
+    }
+
+    leaveGroup = async (req, res) => {
+        try{
+            let username = req.user.username;
+            let groupname = req.body.groupName;
+            let group = Trips.findOneAndUpdate({name: groupname, "members.username": {$in: [username]}}, 
+            {$pull: {members: {username: username}}}, {new: false, useFindAndModify: false})
+            if(group){
+                await userLeftNotifiction({member: group.members, sender: username, groupName: groupname, groupId: group._id})
+                return this.response(res, group);
+            }
+            return this.response(res, {"message": "Unable to leave group"}, 400)
+        }catch(err){
+            console.log("Error in trips.js controller in manageMembersToGroup",err);
+            return this.response(res, {"message": "Unable to leave group", error: err}, 400);
         }
     }
 }
