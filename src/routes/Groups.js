@@ -1,4 +1,4 @@
-import Controller from "../controllers/trips";
+import Controller from "../controllers/GroupsController";
 
 module.exports = app => {
     let TripsController = new Controller();

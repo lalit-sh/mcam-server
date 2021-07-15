@@ -14,6 +14,7 @@ var minify = require('express-minify');
 var compression = require('compression');
 const https = require('https');
 var http = require('http');
+const fileUpload = require('express-fileupload');
 
 
 const env = process.env.NODE_ENV;
@@ -22,7 +23,7 @@ const env = process.env.NODE_ENV;
 const app = express();
 module.exports = app;
 
-
+app.use(fileUpload());
 app.use(morgan(env));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended: true}));

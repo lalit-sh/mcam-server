@@ -1,4 +1,4 @@
-import Controller from "../controllers/users";
+import Controller from "../controllers/UsersController";
 
 module.exports = app => {
 

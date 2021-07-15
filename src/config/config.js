@@ -1,2 +1,2 @@
 export const API_BASE = process.env.API_CONFIG;
-export const FCM_API_KEY = "AAAA9pqB_Mk:APA91bEn5e-yDO0AesrWOF2oX4l0skMQxOzOVDSmFiB6fVgMCeD4Zjq3mF1S4gIqYPU4qSOaQ5FX6PuWyqBjJNHe0_hl62BYioyNC4NGkeaYkohXAmnTdU27O_0_OORmmbFy3fSPKZPG";
+export const FCM_API_KEY = process.env.FCM_KEY;
