@@ -54,27 +54,39 @@ app.use(express.static(path.join(__dirname, 'public')));
 require("./src/routes")(app);
 
 if(env && (env == "production" || env == "PRODUCTION")){
-
-    app.set('forceSSLOptions', {
-        enable301Redirects: true,
-        trustXFPHeader: false,
-        httpsPort: 443,
-        sslRequiredMessage: 'SSL Required.'
-    });
-    app.use(forceSsl);
+    let fssl = true;
     app.use(compression());
     app.use(minify());
 
-    var https_options = {
-        key: fs.readFileSync(path.join(__dirname, 'ssl/private.key')),
-        cert: fs.readFileSync(path.join(__dirname, 'ssl/certificate.crt')),
-        ca: fs.readFileSync(path.join(__dirname, 'ssl/ca_bundle.crt')),
-        secure: true
-    };
-    https.createServer(https_options, app).listen(443, () => {
-        console.log(`working on port ${443}`);
+    try{
+        var https_options = {
+            key: fs.readFileSync(path.join(__dirname, 'ssl/private.key')),
+            cert: fs.readFileSync(path.join(__dirname, 'ssl/certificate.crt')),
+            ca: fs.readFileSync(path.join(__dirname, 'ssl/ca_bundle.crt')),
+            secure: true
+        };
+    }catch(err){
+        fssl = false;
+        console.log("Unable to start ssl server");
+    }
+
+    if(fssl){
+        app.set('forceSSLOptions', {
+            enable301Redirects: true,
+            trustXFPHeader: false,
+            httpsPort: 443,
+            sslRequiredMessage: 'SSL Required.'
+        });
+        app.use(forceSsl);
+        https.createServer(https_options, app).listen(443, () => {
+            console.log(`working on port ${443}`);
+        });
+    }
+    http.createServer(app).listen(80, () => {
+        if(!fssl){
+            console.log("working on port 80");
+        }
     });
-    http.createServer(app).listen(80);
 }else{
     app.listen(port,function(){
         console.log(`Working on port ${port}`);
