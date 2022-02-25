@@ -8,12 +8,18 @@ class Auth {
         return passport.initialize();
     }
     
-    authenticate = (callback) => passport.authenticate("jwt", { session: false, failWithError: true }, callback);
+    authenticate = (callback) => {
+        return passport.authenticate("jwt", { 
+                    session: false, 
+                    failWithError: true, 
+                    ignoreExpiration: true 
+                }, callback);
+    }
 
     getStrategy = () => {
         const params = {
             secretOrKey: process.env.JWT_SECRET,
-            jwtFromRequest: ExtractJwt.fromAuthHeaderWithScheme("jwt"),
+            jwtFromRequest: ExtractJwt.fromAuthHeaderWithScheme("bearer"),
             passReqToCallback: true
         };
 
