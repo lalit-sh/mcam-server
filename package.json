@@ -7,7 +7,8 @@
     "start": "babel-node app.js",
     "dev": "NODE_ENV=local nodemon --exec babel-node app.js",
     "debug": "nodemon  app.js   --inspect=10010  --exec babel-node --inspect ,stage-2 --delay 2 --verbose",
-    "debug-brk": "nodemon app.js --exec babel-node --inspect-brk ,stage-2 --delay 2 --verbose "
+    "debug-brk": "nodemon app.js --exec babel-node --inspect-brk ,stage-2 --delay 2 --verbose",
+    "build": "babel src -d build/src/ && babel app.js -d build"
   },
   "author": "",
   "license": "ISC",
@@ -22,6 +23,7 @@
     "body-parser": "^1.19.0",
     "compression": "^1.7.4",
     "cookie-parser": "^1.4.4",
+    "cors": "^2.8.5",
     "dotenv": "^8.2.0",
     "express": "^4.17.1",
     "express-fileupload": "^1.2.1",

@@ -4,16 +4,17 @@ var express = require( "express");
 var morgan = require( "morgan");
 var bodyParser = require( "body-parser");
 var expressValidator = require("express-validator");
-var db = require( "./src/db");
+// var db = require( "./src/db");
 const auth = require("./src/middleware/auth").default;
 const port = process.env.PORT || 9004;
 const path = require("path");
-var forceSsl = require('express-force-ssl');
-const fs = require('fs');
+// var forceSsl = require('express-force-ssl');
+// const fs = require('fs');
 var minify = require('express-minify');
 var compression = require('compression');
-const https = require('https');
+// const https = require('https');
 var http = require('http');
+const cors = require('cors');
 const fileUpload = require('express-fileupload');
 
 
@@ -23,12 +24,25 @@ const env = process.env.NODE_ENV;
 const app = express();
 module.exports = app;
 
+var corsOptions = {
+    origin: [
+        "http://localhost:3000",
+        "http://localhost:3001"
+    ]
+};
+
 app.use(fileUpload());
-app.use(morgan(env));
-app.use(bodyParser.json());
+app.use(morgan(':date[clf]: :method :url :status :res[content-length] - :response-time ms'))
+app.use(bodyParser.json({
+    verify: function(req, res, buf, encoding) {
+        if (buf && buf.length) {
+            req.rawBody = buf.toString(encoding || 'utf8');
+        }
+    }
+}));
 app.use(bodyParser.urlencoded({extended: true}));
 app.use(expressValidator());
-
+app.use(cors(corsOptions));
 app.use(auth.initialize());
 
 app.all(process.env.API_BASE + "*", (req, res, next) => {
@@ -53,45 +67,21 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 require("./src/routes")(app);
 
-if(env && (env == "production" || env == "PRODUCTION")){
-    let fssl = true;
-    app.use(compression());
-    app.use(minify());
+app.use(function (req, res, next) {
+    res.header("Access-Control-Allow-Origin", "*");
+    res.header("Access-Control-Allow-Credentials", "true");
+    res.header("Access-Control-Allow-Headers", "Origin,Content-Type, Authorization, x-id, Content-Length, X-Requested-With");
+    // res.header("Access-Control-Allow-Headers", "Origin,Content-Type, Authorization, x-id, Content-Length, X-Requested-With");
+    res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+    next();
+});
 
-    try{
-        var https_options = {
-            key: fs.readFileSync(path.join(__dirname, 'ssl/private.key')),
-            cert: fs.readFileSync(path.join(__dirname, 'ssl/certificate.crt')),
-            ca: fs.readFileSync(path.join(__dirname, 'ssl/ca_bundle.crt')),
-            secure: true
-        };
-    }catch(err){
-        fssl = false;
-        console.log("Unable to start ssl server");
-    }
 
-    if(fssl){
-        app.set('forceSSLOptions', {
-            enable301Redirects: true,
-            trustXFPHeader: false,
-            httpsPort: 443,
-            sslRequiredMessage: 'SSL Required.'
-        });
-        app.use(forceSsl);
-        https.createServer(https_options, app).listen(443, () => {
-            console.log(`working on port ${443}`);
-        });
-    }
-    http.createServer(app).listen(80, () => {
-        if(!fssl){
-            console.log("working on port 80");
-        }
-    });
-}else{
-    app.listen(port,function(){
-        console.log(`Working on port ${port}`);
-    });
-}
+app.use(compression());
+app.use(minify());
+http.createServer(app).listen(port, () => {
+    console.log("Working on port ", port);
+});
 
 // const io = require("socket.io")(server);
 // io.sockets.on('connection', function(socket) {
