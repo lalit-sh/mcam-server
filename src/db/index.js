@@ -14,10 +14,11 @@ let options = {
     useUnifiedTopology: true,
     user:process.env.DB_USER,
     pass: process.env.DB_PASS,
-    dbName: dbName
+    dbName: dbName,
+    authSource: dbName
 };
 
-mongoose.connect(`mongodb://${dbAddress}:${dbPort}?authSource=${dbName}`, options).catch(err => {
+mongoose.connect(`mongodb://${dbAddress}:${dbPort}`, options).catch(err => {
     if (err.message.indexOf("ECONNREFUSED") !== -1) {
         console.error("Error: The server was not able to reach MongoDB. Maybe it's not running?");
         process.exit(1);
