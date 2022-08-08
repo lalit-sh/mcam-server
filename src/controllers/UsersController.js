@@ -31,7 +31,8 @@ class AuthController extends BaseController {
                 user.password = password;
                 user.save();
             }
-            sendSms({to: req.body.username, message: `Your MCAM login OTP ${password}.`})
+            console.log("OTP is", password);
+            // sendSms({to: req.body.username, message: `Your MCAM login OTP ${password}.`})
             return res.status(200).end();
         } catch (err) {
             console.log(err);
@@ -41,7 +42,6 @@ class AuthController extends BaseController {
 
     verifyOTPAndGenerateToken = async (req, res) => {
         try{
-            "isiliye to mai khera hu k shadi kar lete hai "   
             req.checkBody("username", "Phone number is required").notEmpty();
             req.checkBody("username", "Phone number must be 10 digit numeric value").isNumeric();
             req.checkBody("username", "Phone number must be of 10 digits").isLength({ min: 10, max: 10 });

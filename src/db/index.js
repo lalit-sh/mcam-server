@@ -18,7 +18,9 @@ let options = {
     authSource: dbName
 };
 
-mongoose.connect(`mongodb://${dbAddress}:${dbPort}`, options).catch(err => {
+mongoose.connect(`mongodb://${dbAddress}:${dbPort}`, options)
+.then(() => console.log("connected!"))
+.catch(err => {
     if (err.message.indexOf("ECONNREFUSED") !== -1) {
         console.error("Error: The server was not able to reach MongoDB. Maybe it's not running?");
         process.exit(1);
